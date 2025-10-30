@@ -1,44 +1,10 @@
 import { buildProgramFromSources, loadShadersFromURLS, setupWebGL } from "../../libs/utils.js";
 import { ortho, lookAt, flatten } from "../../libs/MV.js";
-import { modelView, loadMatrix, multRotationY, multScale } from "../../libs/stack.js";
+import { modelView, loadMatrix, multRotationX, multRotationY, multRotationZ, multScale, multTranslation, popMatrix, pushMatrix } from "../../libs/stack.js";
 
-import * as SPHERE from '../../libs/objects/sphere.js';
+import * as CUBE from '../../libs/objects/cube.js';
+import * as CYLINDER from '../../libs/objects/cylinder.js'
 
-/** @type WebGLRenderingContext */
-let gl;
-
-let time = 0;           // Global simulation time in days
-let speed = 1 / 60.0;   // Speed (how many days added to time on each render pass
-let mode;               // Drawing mode (gl.LINES or gl.TRIANGLES)
-let animation = true;   // Animation is running
-
-const PLANET_SCALE = 10;    // scale that will apply to each planet and satellite
-const ORBIT_SCALE = 1 / 60;   // scale that will apply to each orbit around the sun
-
-const SUN_DIAMETER = 1391900;
-const SUN_DAY = 24.47; // At the equator. The poles are slower as the sun is gaseous
-
-const MERCURY_DIAMETER = 4866 * PLANET_SCALE;
-const MERCURY_ORBIT = 57950000 * ORBIT_SCALE;
-const MERCURY_YEAR = 87.97;
-const MERCURY_DAY = 58.646;
-
-const VENUS_DIAMETER = 12106 * PLANET_SCALE;
-const VENUS_ORBIT = 108110000 * ORBIT_SCALE;
-const VENUS_YEAR = 224.70;
-const VENUS_DAY = 243.018;
-
-const EARTH_DIAMETER = 12742 * PLANET_SCALE;
-const EARTH_ORBIT = 149570000 * ORBIT_SCALE;
-const EARTH_YEAR = 365.26;
-const EARTH_DAY = 0.99726968;
-
-const MOON_DIAMETER = 3474 * PLANET_SCALE;
-const MOON_ORBIT = 363396 * ORBIT_SCALE;
-const MOON_YEAR = 28;
-const MOON_DAY = 0;
-
-const VP_DISTANCE = EARTH_ORBIT;
 
 
 
@@ -46,40 +12,89 @@ function setup(shaders) {
     let canvas = document.getElementById("gl-canvas");
     let aspect = canvas.width / canvas.height;
 
-    gl = setupWebGL(canvas);
+    /** @type WebGL2RenderingContext */
+    let gl = setupWebGL(canvas);
+
+    // Drawing mode (gl.LINES or gl.TRIANGLES)
+    let mode = gl.LINES;
 
     let program = buildProgramFromSources(gl, shaders["shader.vert"], shaders["shader.frag"]);
 
-    let mProjection = ortho(-VP_DISTANCE * aspect, VP_DISTANCE * aspect, -VP_DISTANCE, VP_DISTANCE, -3 * VP_DISTANCE, 3 * VP_DISTANCE);
+    let mProjection = ortho(-1 * aspect, aspect, -1, 1, 0.01, 3);
+    let mView = lookAt([2, 1.2, 1], [0, 0.6, 0], [0, 1, 0]);
 
-    mode = gl.LINES;
+    let zoom = 1.0;
+
+    /** Model parameters */
+    let ag = 0;
+    let rg = 0;
+    let rb = 0;
+    let rc = 0;
 
     resize_canvas();
     window.addEventListener("resize", resize_canvas);
 
     document.onkeydown = function (event) {
         switch (event.key) {
-            case 'w':
+            case '1':
+                // Front view
+                mView = lookAt([0, 0.6, 1], [0, 0.6, 0], [0, 1, 0]);
+                break;
+            case '2':
+                // Top view
+                mView = lookAt([0, 1.6, 0], [0, 0.6, 0], [0, 0, -1]);
+                break;
+            case '3':
+                // Right view
+                mView = lookAt([1, 0.6, 0.], [0, 0.6, 0], [0, 1, 0]);
+                break;
+            case '4':
+                mView = lookAt([2, 1.2, 1], [0, 0.6, 0], [0, 1, 0]);
+                break;
+            case '9':
                 mode = gl.LINES;
                 break;
-            case 's':
+            case '0':
                 mode = gl.TRIANGLES;
                 break;
             case 'p':
-                animation = !animation;
+                ag = Math.min(0.050, ag + 0.005);
+                break;
+            case 'o':
+                ag = Math.max(0, ag - 0.005);
+                break;
+            case 'q':
+                rg += 1;
+                break;
+            case 'e':
+                rg -= 1;
+                break;
+            case 'w':
+                rc = Math.min(120, rc + 1);
+                break;
+            case 's':
+                rc = Math.max(-120, rc - 1);
+                break;
+            case 'a':
+                rb -= 1;
+                break;
+            case 'd':
+                rb += 1;
                 break;
             case '+':
-                if (animation) speed *= 1.1;
+                zoom /= 1.1;
                 break;
             case '-':
-                if (animation) speed /= 1.1;
+                zoom *= 1.1;
                 break;
         }
     }
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    SPHERE.init(gl);
+    gl.clearColor(0.3, 0.3, 0.3, 1.0);
     gl.enable(gl.DEPTH_TEST);   // Enables Z-buffer depth test
+
+    CUBE.init(gl);
+    CYLINDER.init(gl);
 
     window.requestAnimationFrame(render);
 
@@ -91,27 +106,121 @@ function setup(shaders) {
         aspect = canvas.width / canvas.height;
 
         gl.viewport(0, 0, canvas.width, canvas.height);
-        mProjection = ortho(-VP_DISTANCE * aspect, VP_DISTANCE * aspect, -VP_DISTANCE, VP_DISTANCE, -3 * VP_DISTANCE, 3 * VP_DISTANCE);
+        mProjection = ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.01, 3);
+    }
+
+    function uploadProjection() {
+        uploadMatrix("u_projection", mProjection);
     }
 
     function uploadModelView() {
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "u_model_view"), false, flatten(modelView()));
+        uploadMatrix("u_model_view", modelView());
+    }
+
+    function uploadMatrix(name, m) {
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, name), false, flatten(m));
+    }
+
+    function UpperArm() {
+        pushMatrix()
+        multScale([0.4, 0.1, 0.4]);
+        multTranslation([0, 0.5, 0]);
+
+        uploadModelView();
+        CYLINDER.draw(gl, program, mode);
+        popMatrix()
+        multTranslation([0, 0.1, 0]);
+        multScale([0.05, 0.6, 0.05]);
+        multTranslation([0, 0.5, 0]);
+
+        uploadModelView();
+        CUBE.draw(gl, program, mode);
+    }
+
+    function LowerArmAndClaw() {
+        multRotationZ(rc);
+        pushMatrix();
+        LowerArm();
+        popMatrix();
+        multTranslation([0, 0.45, 0]);
+        Claw();
+    }
+
+    function LowerArm() {
+        pushMatrix();
+        multScale([0.1, 0.1, 0.05]);
+        multRotationX(90);
+
+        uploadModelView();
+        CYLINDER.draw(gl, program, mode);
+        popMatrix();
+        multTranslation([0, 0.05, 0]);
+        multScale([0.05, 0.4, 0.05]);
+        multTranslation([0, 0.5, 0]);
+
+        uploadModelView();
+        CUBE.draw(gl, program, mode);
     }
 
 
+    function Claw() {
+        multRotationY(rg)
+        // Fist
+        pushMatrix();
+        multScale([0.2, 0.05, 0.2]);
+        multTranslation([0, -0.5, 0]);
+
+        uploadModelView();
+        CYLINDER.draw(gl, program, mode);
+        popMatrix();
+        // Maxilla 1
+        pushMatrix();
+        multTranslation([ag, 0, 0]);
+        multScale([0.02, 0.15, 0.1]);
+        multTranslation([0.5, 0.5, 0]);
+
+        uploadModelView();
+        CUBE.draw(gl, program, mode);
+        popMatrix();
+        // Maxilla 2
+        multTranslation([-ag, 0, 0]);
+        multScale([0.02, 0.15, 0.1]);
+        multTranslation([-0.5, 0.5, 0]);
+
+        uploadModelView();
+        CUBE.draw(gl, program, mode);
+    }
+
+    function RobotArm() {
+        multRotationY(rb);
+        pushMatrix();
+        UpperArm();
+        popMatrix();
+        multTranslation([0, 0.7, 0]);
+
+        multTranslation([0, 0.05, 0]);
+        LowerArmAndClaw();
+    }
+
     function render() {
-        if (animation) time += speed;
         window.requestAnimationFrame(render);
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.useProgram(program);
 
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "u_projection"), false, flatten(mProjection));
+        // Send the mProjection matrix to the GLSL program
+        mProjection = ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.01, 3);
+        uploadProjection(mProjection);
 
-        loadMatrix(lookAt([0, VP_DISTANCE, VP_DISTANCE], [0, 0, 0], [0, 1, 0]));
+        // Load the ModelView matrix with the Worl to Camera (View) matrix
+        loadMatrix(mView);
 
-        // Scene graph traversal code goes here...
+        //Claw();
+        //LowerArm();
+        //LowerArmAndClaw();
+        //UpperArm();
+        RobotArm();
     }
 }
 
