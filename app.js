@@ -4,6 +4,9 @@ import { modelView, loadMatrix, multRotationX, multRotationY, multRotationZ, mul
 
 import * as CUBE from '../../libs/objects/cube.js';
 import * as CYLINDER from '../../libs/objects/cylinder.js'
+import * as SPHERE from '../../libs/objects/sphere.js'
+import * as TORUS from '../../libs/objects/torus.js'
+import { mult } from "./libs/MV.js";
 
 
 
@@ -114,6 +117,8 @@ function setup(shaders) {
 
     CUBE.init(gl);
     CYLINDER.init(gl);
+    SPHERE.init(gl);
+    TORUS.init(gl);
 
     window.requestAnimationFrame(render);
 
@@ -234,16 +239,41 @@ function setup(shaders) {
     function Tank() {
 
         pushMatrix();
-
-        multTranslation([0, 0.15, 0]);
+        multTranslation([0, 0.08, 0]);
 
         pushMatrix();
+
         multTranslation([0, 0.1, 0]);
         Base();
+
         popMatrix();
 
+        pushMatrix();
+
+        wheels();
+
+        popMatrix();
 
         pushMatrix();
+
+        multTranslation([0, 0.23, 0]);
+        rotatinThingy();
+
+        popMatrix();
+
+        pushMatrix();
+
+
+        topHalfSphere();
+
+        popMatrix();
+        pushMatrix();
+
+        topSphereComplement();
+        popMatrix();
+
+        pushMatrix();
+
         multTranslation([0, 0.23, 0]);
         TankMiddleLayer();
         popMatrix();
@@ -343,7 +373,7 @@ function setup(shaders) {
     function ground(uColorLocation, tilesX = 10, tilesZ = 10, tileSize = 0.5666666666666667) {
 
 
-        const tileHeight = 0.01;
+        const tileHeight = 0.03;
 
         const groundY = -tileHeight / 2;
 
@@ -377,6 +407,83 @@ function setup(shaders) {
             }
         }
     }
+    function rotatinThingy() {
+
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+        multTranslation([0, -0.32, 0]);
+        multTranslation([-0.5, 0.5, 0]);
+        multRotationX(90);
+        multScale([0.12, 0.12, 0.12]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, mode);
+    }
+    function topHalfSphere() {
+
+
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+        multTranslation([0, 0.52, 0]);
+        multScale([0.4, 0.2, 0.4]);
+        multRotationX(180);
+        uploadModelView();
+        SPHERE.draw(gl, program, mode);
+
+
+    }
+    function topSphereComplement() {
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+        multTranslation([0, 0.55, 0]);
+        multScale([0.16, 0.16, 0.16]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, mode);
+    }
+    function wheels() {
+
+
+        // --- Define wheel and layout properties ---
+        const numWheels = 6;
+        const baseLength = 1.4;  // From Base() scale [1.5, 0.16, 0.8]
+        const baseWidth = 0.855;   // From Base() scale
+
+        const localYCenter = 0.03;
+
+        const wheelRadius = 0.15; // Wheels should extend slightly below the base
+        const wheelThickness = 0.07; // This will be the axle length
+
+        // --- Calculate positions ---
+        const spacing = baseLength / numWheels; // 1.5 / 6 = 0.25
+        const startX = -baseLength / 2 + spacing / 2; // -0.75 + 0.125 = -0.625
+
+        const zPosRight = baseWidth / 2; // 0.4
+        const zPosLeft = -baseWidth / 2; // -0.4
+
+        // Set a color for the wheels
+        gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2); // Dark grey
+
+        // Use a loop from 0 to 5 (for 6 wheels)
+        for (let i = 0; i < numWheels; i++) {
+            const xPos = startX + i * spacing;
+
+            // --- Draw right-side wheel ---
+            pushMatrix();
+            multTranslation([xPos, localYCenter, zPosRight]);
+            multRotationX(90);
+            multScale([wheelRadius, wheelThickness, wheelRadius]); // <-- This scaling is perfect
+            uploadModelView();
+            TORUS.draw(gl, program, mode); // <-- CHANGE THIS
+            popMatrix();
+            // --- Draw left-side wheel ---
+            pushMatrix();
+            multTranslation([xPos, localYCenter, zPosLeft]);
+            multRotationX(90);
+            multScale([wheelRadius, wheelThickness, wheelRadius]); // <-- This scaling is perfect
+            uploadModelView();
+            TORUS.draw(gl, program, mode); // <-- CHANGE THIS
+            popMatrix();
+        }
+
+
+    }
+
 
     function render() {
         window.requestAnimationFrame(render);
