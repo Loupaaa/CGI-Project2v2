@@ -1,5 +1,5 @@
 import { buildProgramFromSources, loadShadersFromURLS, setupWebGL } from "../../libs/utils.js";
-import { ortho, lookAt, flatten } from "../../libs/MV.js";
+import { ortho, lookAt, flatten, perspective, } from "../../libs/MV.js";
 import { modelView, loadMatrix, multRotationX, multRotationY, multRotationZ, multScale, multTranslation, popMatrix, pushMatrix } from "../../libs/stack.js";
 
 import * as CUBE from '../../libs/objects/cube.js';
@@ -16,14 +16,19 @@ function setup(shaders) {
     let gl = setupWebGL(canvas);
 
     // Drawing mode (gl.LINES or gl.TRIANGLES)
-    let mode = gl.LINES;
+    let mode = gl.TRIANGLES;
 
     let program = buildProgramFromSources(gl, shaders["shader.vert"], shaders["shader.frag"]);
 
-    let mProjection = ortho(-1 * aspect, aspect, -1, 1, 0.01, 3);
-    let mView = lookAt([2, 1.2, 1], [0, 0.6, 0], [0, 1, 0]);
+    let uColorLocation = gl.getUniformLocation(program, "u_color");
+
+    let mProjection = ortho(-1 * aspect, aspect, -1, 1, -10, 10);
+    let mView = lookAt([2, 1.2, 5], [0, 0, 0], [0, 1, 0]);
 
     let zoom = 1.0;
+
+    let viewSize = 0.8;
+
 
     /** Model parameters */
     let ag = 0;
@@ -37,20 +42,49 @@ function setup(shaders) {
     document.onkeydown = function (event) {
         switch (event.key) {
             case '1':
-                // Front view
-                mView = lookAt([0, 0.6, 1], [0, 0.6, 0], [0, 1, 0]);
+                mView = lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0]);
+
+                viewSize = 0.8;
                 break;
             case '2':
                 // Top view
-                mView = lookAt([0, 1.6, 0], [0, 0.6, 0], [0, 0, -1]);
+                mView = lookAt([0, 5, 0], [0, 0.3, 0], [0, 0, -1]);
+
+                viewSize = 1.0;
                 break;
             case '3':
-                // Right view
-                mView = lookAt([1, 0.6, 0.], [0, 0.6, 0], [0, 1, 0]);
+                // Right view 
+                mView = lookAt([5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
+                viewSize = 0.8;
+
                 break;
             case '4':
-                mView = lookAt([2, 1.2, 1], [0, 0.6, 0], [0, 1, 0]);
+                // Vista oblíqua (tipo cavaleira)
+                let alpha = 45 * Math.PI / 180;   // ângulo em X
+                let phi = 45 * Math.PI / 180;     // ângulo em Y (ou ajusta 30º se quiseres)
+                let l = 0.5;                      // fator de profundidade (cisalhamento)
+
+                // Matriz ortográfica base
+                mProjection = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom,
+                    -viewSize * zoom, viewSize * zoom, -10, 10);
+
+                // Matriz de cisalhamento para projeção oblíqua
+                let oblique = [
+                    1, 0, l * Math.cos(alpha), 0,
+                    0, 1, l * Math.sin(phi), 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                ];
+
+                // Multiplica a projeção ortográfica pela matriz de cisalhamento
+                mProjection = mult(mProjection, oblique);
+
+                // Mantém a câmara fixa
+                mView = lookAt([0, 1, 0], [0, 0, 0], [0, 1, 0]);
+
+                viewSize = 3.0;
                 break;
+
             case '9':
                 mode = gl.LINES;
                 break;
@@ -90,7 +124,7 @@ function setup(shaders) {
         }
     }
 
-    gl.clearColor(0.3, 0.3, 0.3, 1.0);
+    gl.clearColor(0.6, 0.7, 0.8, 1.0);
     gl.enable(gl.DEPTH_TEST);   // Enables Z-buffer depth test
 
     CUBE.init(gl);
@@ -106,7 +140,13 @@ function setup(shaders) {
         aspect = canvas.width / canvas.height;
 
         gl.viewport(0, 0, canvas.width, canvas.height);
-        mProjection = ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.01, 3);
+        if (aspect > 1) {
+            //  WIDE 
+            mProjection = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -10, 10);
+        } else {
+            // TALL
+            mProjection = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -10, 10);
+        }
     }
 
     function uploadProjection() {
@@ -202,6 +242,45 @@ function setup(shaders) {
         LowerArmAndClaw();
     }
 
+
+    function ground(uColorLocation, tilesX = 10, tilesZ = 10, tileSize = 0.5666666666666667) {
+
+
+        const tileHeight = 0.01; // Make tiles very flat
+
+        const groundY = -tileHeight / 2;
+
+        const whiteTile = [0.8, 0.8, 0.8];
+        const darkTile = [0.5, 0.5, 0.5];
+
+        for (let x = 0; x < tilesX; x++) {
+            for (let z = 0; z < tilesZ; z++) {
+
+                if ((x + z) % 2 == 0) { // coluna + linha para decidir a cor
+                    gl.uniform3fv(uColorLocation, whiteTile);
+                } else {
+                    gl.uniform3fv(uColorLocation, darkTile);
+                }
+
+                //Corre para todos os tiles 
+                pushMatrix();
+
+                //Mover para a origem
+                const offsetX = -(tilesX * tileSize) / 2 + tileSize / 2;
+                const offsetZ = -(tilesZ * tileSize) / 2 + tileSize / 2;
+
+                //translaçao para o sitio certo e escala
+                multTranslation([x * tileSize + offsetX, groundY, z * tileSize + offsetZ]);
+                multScale([tileSize, tileHeight, tileSize]);
+
+                uploadModelView();
+                CUBE.draw(gl, program, mode);
+
+                popMatrix();
+            }
+        }
+    }
+
     function render() {
         window.requestAnimationFrame(render);
 
@@ -209,17 +288,26 @@ function setup(shaders) {
 
         gl.useProgram(program);
 
+
+        
         // Send the mProjection matrix to the GLSL program
-        mProjection = ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.01, 3);
-        uploadProjection(mProjection);
+        if (aspect > 1) {
+            // WIDE
+            mProjection = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -10, 10);
+        } else {
+            // TALL
+            mProjection = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -10, 10);
+        }
+
+        uploadProjection();
 
         // Load the ModelView matrix with the Worl to Camera (View) matrix
         loadMatrix(mView);
 
-        //Claw();
-        //LowerArm();
-        //LowerArmAndClaw();
-        //UpperArm();
+        //new
+
+        ground(uColorLocation, 11, 11, 0.5666666666666667);
+
         RobotArm();
     }
 }
