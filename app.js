@@ -59,22 +59,7 @@ function setup(shaders) {
 
                 break;
             case '4':
-                // Vista oblíqua (tipo cavaleira)
-                let alpha = 45 * Math.PI / 180;   // ângulo em X
-                let phi = 45 * Math.PI / 180;     // ângulo em Y (ou ajusta 30º se quiseres)
-                let l = 0.5;                      // fator de profundidade (cisalhamento)
 
-                // Matriz ortográfica base
-                mProjection = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom,
-                    -viewSize * zoom, viewSize * zoom, -10, 10);
-
-                // Matriz de cisalhamento para projeção oblíqua
-                let oblique = [
-                    1, 0, l * Math.cos(alpha), 0,
-                    0, 1, l * Math.sin(phi), 0,
-                    0, 0, 1, 0,
-                    0, 0, 0, 1
-                ];
 
                 // Multiplica a projeção ortográfica pela matriz de cisalhamento
                 mProjection = mult(mProjection, oblique);
@@ -161,6 +146,117 @@ function setup(shaders) {
         gl.uniformMatrix4fv(gl.getUniformLocation(program, name), false, flatten(m));
     }
 
+
+    /**
+     *o 1º retângulo
+     */
+    function Base() {
+
+        //desenhar 1 vez
+        pushMatrix();
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+
+        multScale([1.5, 0.16, 0.8]);
+
+        uploadModelView();
+        CUBE.draw(gl, program, gl.TRIANGLES);
+
+        popMatrix();
+
+        // Repetir para fazer linhas ns se é assim
+
+        pushMatrix();
+        gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+
+        multScale([1.501, 0.161, 0.801]);
+        uploadModelView();
+
+        CUBE.draw(gl, program, gl.LINES);
+        popMatrix();
+    }
+
+    /**
+     *o 2º retângulo
+     */
+    function TankMiddleLayer() {
+
+        //desenhar 1 vez
+        pushMatrix();
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+
+        multScale([1.6, 0.1, 0.9]);
+
+        uploadModelView();
+        CUBE.draw(gl, program, gl.TRIANGLES);
+        popMatrix();
+
+        //Repetir para fazer linhas ns se é assim
+
+        pushMatrix();
+        gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+
+        multScale([1.601, 0.101, 0.901]);
+        uploadModelView();
+
+        CUBE.draw(gl, program, gl.LINES);
+        popMatrix();
+    }
+
+    /**
+     * Upper 3º Retangulo e Cabina
+     */
+    function TankUpperL_Cabin() {
+
+        // desenhar 1 vez
+        pushMatrix();
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+
+        multScale([1.0, 0.24, 0.5]);
+        uploadModelView();
+        CUBE.draw(gl, program, gl.TRIANGLES);
+        popMatrix();
+
+        //Repetir para fazer linhas ns se é assim
+        pushMatrix();
+        gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+
+        multScale([1.001, 0.241, 0.501]);
+        uploadModelView();
+
+        CUBE.draw(gl, program, gl.LINES);
+        popMatrix();
+
+    }
+
+    /**
+     * Tanque Main
+     */
+    function Tank() {
+
+        pushMatrix();
+
+        multTranslation([0, 0.15, 0]);
+
+        pushMatrix();
+        multTranslation([0, 0.1, 0]);
+        Base();
+        popMatrix();
+
+
+        pushMatrix();
+        multTranslation([0, 0.23, 0]);
+        TankMiddleLayer();
+        popMatrix();
+
+        pushMatrix();
+        multTranslation([0, 0.40, 0]);
+        TankUpperL_Cabin();
+        popMatrix();
+
+        popMatrix();
+    }
+
+    /*
     function UpperArm() {
         pushMatrix()
         multScale([0.4, 0.1, 0.4]);
@@ -231,6 +327,7 @@ function setup(shaders) {
         CUBE.draw(gl, program, mode);
     }
 
+    
     function RobotArm() {
         multRotationY(rb);
         pushMatrix();
@@ -241,12 +338,12 @@ function setup(shaders) {
         multTranslation([0, 0.05, 0]);
         LowerArmAndClaw();
     }
-
+    */
 
     function ground(uColorLocation, tilesX = 10, tilesZ = 10, tileSize = 0.5666666666666667) {
 
 
-        const tileHeight = 0.01; // Make tiles very flat
+        const tileHeight = 0.01;
 
         const groundY = -tileHeight / 2;
 
@@ -289,7 +386,7 @@ function setup(shaders) {
         gl.useProgram(program);
 
 
-        
+
         // Send the mProjection matrix to the GLSL program
         if (aspect > 1) {
             // WIDE
@@ -308,7 +405,7 @@ function setup(shaders) {
 
         ground(uColorLocation, 11, 11, 0.5666666666666667);
 
-        RobotArm();
+        Tank();
     }
 }
 
