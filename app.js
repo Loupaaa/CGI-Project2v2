@@ -57,7 +57,7 @@ function setup(shaders) {
                 break;
             case '3':
                 // Right view 
-                mView = lookAt([5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
+                mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
                 viewSize = 0.8;
 
                 break;
@@ -233,6 +233,228 @@ function setup(shaders) {
 
     }
 
+
+
+    function rotatinThingy() {
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+        multTranslation([0, -0.32, 0]);
+
+        multTranslation([-0.5, 0.5, 0]);
+
+        multRotationX(90);
+        multScale([0.12, 0.12, 0.12]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, gl.TRIANGLES);
+
+        popMatrix();
+
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+
+
+        multTranslation([0, -0.32, 0]);
+
+        multTranslation([-0.5, 0.5, 0]);
+        multRotationX(90);
+
+        multScale([0.121, 0.121, 0.121]);
+
+        uploadModelView();
+        CYLINDER.draw(gl, program, gl.LINES);
+        popMatrix();
+
+        Cannon();
+    }
+    function topHalfSphere() {
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+        multTranslation([0, 0.52, 0]);
+        multScale([0.4, 0.2, 0.4]);
+        multRotationX(180);
+        uploadModelView();
+        SPHERE.draw(gl, program, gl.TRIANGLES);
+
+        popMatrix();
+
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+        multTranslation([0, 0.52, 0]);
+        multScale([0.401, 0.201, 0.401]);
+        multRotationX(180);
+        uploadModelView();
+        SPHERE.draw(gl, program, gl.LINES);
+        popMatrix();
+
+
+    }
+
+    function topSphereComplement() {
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
+        multTranslation([0, 0.55, 0]);
+        multScale([0.16, 0.16, 0.16]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, gl.TRIANGLES);
+
+        popMatrix();
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+        multTranslation([0, 0.55, 0]);
+        multScale([0.161, 0.161, 0.161]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, gl.LINES);
+
+        popMatrix();
+    }
+
+    function wheels() {
+
+        // --- Define wheel and layout properties ---
+        const numWheels = 6;
+        const baseLength = 1.4;
+        const baseWidth = 0.855;
+        const localYCenter = 0.03;
+        const wheelRadius = 0.15; // Raio do pneu (Torus)
+
+        // --- Propriedades da Jante (Cilindro) ---
+        const rimRadius = 0.10; // A jante é mais pequena que o pneu
+        const rimThickness = 0.05; // A jante é mais grossa que o pneu
+
+        // --- Calculate positions ---
+        const spacing = baseLength / numWheels;
+        const startX = -baseLength / 2 + spacing / 2;
+        const zPosRight = baseWidth / 2 - 0.004;
+        const zPosLeft = -baseWidth / 2 + 0.004;
+
+        for (let i = 0; i < numWheels; i++) {
+            const xPos = startX + i * spacing;
+
+            // --- Rodas Direitas ---
+            pushMatrix();
+            multTranslation([xPos, localYCenter, zPosRight]);
+            multRotationX(90);
+
+
+            gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
+            pushMatrix();
+            multScale([wheelRadius, wheelRadius * 0.6, wheelRadius]);
+            uploadModelView();
+            TORUS.draw(gl, program, gl.TRIANGLES);
+            popMatrix();
+
+            gl.uniform3f(uColorLocation, 0.4, 0.4, 0.4);
+            pushMatrix();
+            multScale([wheelRadius + 0.001, wheelRadius * 0.6 + 0.001, wheelRadius + 0.001]);
+            uploadModelView();
+            TORUS.draw(gl, program, gl.LINES);
+            popMatrix();
+
+
+            gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
+            pushMatrix();
+            multScale([rimRadius, rimThickness * 0.6, rimRadius]);
+            uploadModelView();
+            CYLINDER.draw(gl, program, gl.TRIANGLES);
+            popMatrix();
+
+            gl.uniform3f(uColorLocation, 0.25, 0.25, 0.25);
+            pushMatrix();
+            multScale([rimRadius + 0.001, rimThickness * 0.6 + 0.001, rimRadius + 0.001]);
+            uploadModelView();
+            CYLINDER.draw(gl, program, gl.LINES);
+            popMatrix();
+
+            popMatrix();
+
+
+
+            pushMatrix();
+            multTranslation([xPos, localYCenter, zPosLeft]);
+            multRotationX(90);
+
+            // --- Rodas Esquerdas ---
+
+
+            gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
+            pushMatrix();
+            multScale([wheelRadius, wheelRadius * 0.6, wheelRadius]);
+            uploadModelView();
+            TORUS.draw(gl, program, gl.TRIANGLES);
+            popMatrix();
+
+            gl.uniform3f(uColorLocation, 0.4, 0.4, 0.4);
+            pushMatrix();
+            multScale([wheelRadius + 0.001, wheelRadius * 0.6 + 0.001, wheelRadius + 0.001]);
+            uploadModelView();
+            TORUS.draw(gl, program, gl.LINES);
+            popMatrix();
+
+
+            gl.uniform3f(uColorLocation, 0.5, 0.5, 0.5);
+            pushMatrix();
+            multScale([rimRadius, rimThickness * 0.6, rimRadius]);
+            uploadModelView();
+            CYLINDER.draw(gl, program, gl.TRIANGLES);
+            popMatrix();
+
+            gl.uniform3f(uColorLocation, 0.7, 0.7, 0.7);
+            pushMatrix();
+            multScale([rimRadius + 0.001, rimThickness * 0.6 + 0.001, rimRadius + 0.001]);
+            uploadModelView();
+            CYLINDER.draw(gl, program, gl.LINES);
+            popMatrix();
+
+            popMatrix();
+        }
+    }
+
+    function Cannon() {
+
+        pushMatrix();
+
+
+        gl.uniform3f(uColorLocation, 0.25, 0.25, 0.25);
+
+
+        multTranslation([-0.5, 0.5, 0]);
+        multRotationX(90);
+        multTranslation([0, 0.7, 0]);
+
+
+        multScale([0.05, 1.2, 0.05]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, gl.TRIANGLES);
+
+        popMatrix();
+
+
+        pushMatrix();
+
+        gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
+        multTranslation([-0.5, 0.5, 0]);
+        multRotationX(90);
+        multTranslation([0, 0.7, 0]);
+        multScale([0.051, 1.201, 0.051]);
+        uploadModelView();
+        CYLINDER.draw(gl, program, gl.LINES);
+
+        popMatrix();
+    }
+
+
     /**
      * Tanque Main
      */
@@ -285,6 +507,7 @@ function setup(shaders) {
 
         popMatrix();
     }
+
 
     /*
     function UpperArm() {
@@ -406,82 +629,6 @@ function setup(shaders) {
                 popMatrix();
             }
         }
-    }
-    function rotatinThingy() {
-
-        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
-        multTranslation([0, -0.32, 0]);
-        multTranslation([-0.5, 0.5, 0]);
-        multRotationX(90);
-        multScale([0.12, 0.12, 0.12]);
-        uploadModelView();
-        CYLINDER.draw(gl, program, mode);
-    }
-    function topHalfSphere() {
-
-
-        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
-        multTranslation([0, 0.52, 0]);
-        multScale([0.4, 0.2, 0.4]);
-        multRotationX(180);
-        uploadModelView();
-        SPHERE.draw(gl, program, mode);
-
-
-    }
-    function topSphereComplement() {
-        gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
-        multTranslation([0, 0.55, 0]);
-        multScale([0.16, 0.16, 0.16]);
-        uploadModelView();
-        CYLINDER.draw(gl, program, mode);
-    }
-    function wheels() {
-
-
-        // --- Define wheel and layout properties ---
-        const numWheels = 6;
-        const baseLength = 1.4;  // From Base() scale [1.5, 0.16, 0.8]
-        const baseWidth = 0.855;   // From Base() scale
-
-        const localYCenter = 0.03;
-
-        const wheelRadius = 0.15; // Wheels should extend slightly below the base
-        const wheelThickness = 0.07; // This will be the axle length
-
-        // --- Calculate positions ---
-        const spacing = baseLength / numWheels; // 1.5 / 6 = 0.25
-        const startX = -baseLength / 2 + spacing / 2; // -0.75 + 0.125 = -0.625
-
-        const zPosRight = baseWidth / 2; // 0.4
-        const zPosLeft = -baseWidth / 2; // -0.4
-
-        // Set a color for the wheels
-        gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2); // Dark grey
-
-        // Use a loop from 0 to 5 (for 6 wheels)
-        for (let i = 0; i < numWheels; i++) {
-            const xPos = startX + i * spacing;
-
-            // --- Draw right-side wheel ---
-            pushMatrix();
-            multTranslation([xPos, localYCenter, zPosRight]);
-            multRotationX(90);
-            multScale([wheelRadius, wheelThickness, wheelRadius]); // <-- This scaling is perfect
-            uploadModelView();
-            TORUS.draw(gl, program, mode); // <-- CHANGE THIS
-            popMatrix();
-            // --- Draw left-side wheel ---
-            pushMatrix();
-            multTranslation([xPos, localYCenter, zPosLeft]);
-            multRotationX(90);
-            multScale([wheelRadius, wheelThickness, wheelRadius]); // <-- This scaling is perfect
-            uploadModelView();
-            TORUS.draw(gl, program, mode); // <-- CHANGE THIS
-            popMatrix();
-        }
-
-
     }
 
 
