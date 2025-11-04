@@ -42,6 +42,22 @@ function setup(shaders) {
     resize_canvas();
     window.addEventListener("resize", resize_canvas);
 
+    canvas.addEventListener("wheel", function (event) {
+        event.preventDefault();
+
+
+        if (event.deltaY < 0) {
+
+            zoom /= 1.1;
+        } else {
+
+            zoom *= 1.1;
+        }
+
+
+        resize_canvas();
+    });
+
     document.onkeydown = function (event) {
         switch (event.key) {
             case '1':
@@ -510,89 +526,6 @@ function setup(shaders) {
     }
 
 
-    /*
-    function UpperArm() {
-        pushMatrix()
-        multScale([0.4, 0.1, 0.4]);
-        multTranslation([0, 0.5, 0]);
-
-        uploadModelView();
-        CYLINDER.draw(gl, program, mode);
-        popMatrix()
-        multTranslation([0, 0.1, 0]);
-        multScale([0.05, 0.6, 0.05]);
-        multTranslation([0, 0.5, 0]);
-
-        uploadModelView();
-        CUBE.draw(gl, program, mode);
-    }
-
-    function LowerArmAndClaw() {
-        multRotationZ(rc);
-        pushMatrix();
-        LowerArm();
-        popMatrix();
-        multTranslation([0, 0.45, 0]);
-        Claw();
-    }
-
-    function LowerArm() {
-        pushMatrix();
-        multScale([0.1, 0.1, 0.05]);
-        multRotationX(90);
-
-        uploadModelView();
-        CYLINDER.draw(gl, program, mode);
-        popMatrix();
-        multTranslation([0, 0.05, 0]);
-        multScale([0.05, 0.4, 0.05]);
-        multTranslation([0, 0.5, 0]);
-
-        uploadModelView();
-        CUBE.draw(gl, program, mode);
-    }
-
-
-    function Claw() {
-        multRotationY(rg)
-        // Fist
-        pushMatrix();
-        multScale([0.2, 0.05, 0.2]);
-        multTranslation([0, -0.5, 0]);
-
-        uploadModelView();
-        CYLINDER.draw(gl, program, mode);
-        popMatrix();
-        // Maxilla 1
-        pushMatrix();
-        multTranslation([ag, 0, 0]);
-        multScale([0.02, 0.15, 0.1]);
-        multTranslation([0.5, 0.5, 0]);
-
-        uploadModelView();
-        CUBE.draw(gl, program, mode);
-        popMatrix();
-        // Maxilla 2
-        multTranslation([-ag, 0, 0]);
-        multScale([0.02, 0.15, 0.1]);
-        multTranslation([-0.5, 0.5, 0]);
-
-        uploadModelView();
-        CUBE.draw(gl, program, mode);
-    }
-
-    
-    function RobotArm() {
-        multRotationY(rb);
-        pushMatrix();
-        UpperArm();
-        popMatrix();
-        multTranslation([0, 0.7, 0]);
-
-        multTranslation([0, 0.05, 0]);
-        LowerArmAndClaw();
-    }
-    */
 
     function ground(uColorLocation, tilesX = 10, tilesZ = 10, tileSize = 0.5666666666666667) {
 

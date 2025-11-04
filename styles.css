@@ -1,9 +1,27 @@
-body, html {
+body,
+html {
     height: 100%;
 }
+
 body {
     /*display: flex;*/
     margin: 0px;
-    overflow: hidden; /*  Disable scrollbars */
+    overflow: hidden;
+    /*  Disable scrollbars */
     background-color: black;
+}
+
+
+#overlay {
+    border-radius: 15px;
+    position: fixed;
+    margin: 0;
+    padding: 10px;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(211, 211, 211, 0.715);
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    color: white;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 20px;
 }
