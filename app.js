@@ -429,12 +429,12 @@ function setup(shaders) {
         gl.uniform3f(uColorLocation, 0.25, 0.25, 0.25);
 
 
-        multTranslation([-0.5, 0.5, 0]);
-        multRotationX(90);
+        multTranslation([-0.4, 0.08, 0]);
+        multRotationZ(45);
         multTranslation([0, 0.7, 0]);
 
 
-        multScale([0.05, 1.2, 0.05]);
+        multScale([0.025, 1.2, 0.025]);
         uploadModelView();
         CYLINDER.draw(gl, program, gl.TRIANGLES);
 
@@ -444,10 +444,11 @@ function setup(shaders) {
         pushMatrix();
 
         gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
-        multTranslation([-0.5, 0.5, 0]);
-        multRotationX(90);
+        multTranslation([-0.4, 0.08, 0]);
+        multRotationZ(45);
         multTranslation([0, 0.7, 0]);
-        multScale([0.051, 1.201, 0.051]);
+
+        multScale([0.025, 1.2, 0.025]);
         uploadModelView();
         CYLINDER.draw(gl, program, gl.LINES);
 
