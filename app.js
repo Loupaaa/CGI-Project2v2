@@ -108,16 +108,16 @@ function setup(shaders) {
                 rg -= 1;
                 break;
             case 'w':
-                rc = Math.min(120, rc + 1);
+                rc = Math.min(60, rc + 1); //here the first number is max angle it can go in the animation 
                 break;
             case 's':
-                rc = Math.max(-120, rc - 1);
+                rc = Math.max(-30, rc - 1);
                 break;
             case 'a':
-                rb -= 1;
+                rb = Math.max(-40, rb - 1);
                 break;
             case 'd':
-                rb += 1;
+                rb = Math.min(40, rb + 1);
                 break;
             case '+':
                 zoom /= 1.1;
@@ -257,8 +257,9 @@ function setup(shaders) {
 
         gl.uniform3f(uColorLocation, 0.7, 0.6, 0.35);
         multTranslation([0, -0.32, 0]);
-
         multTranslation([-0.5, 0.5, 0]);
+
+        multRotationZ(-rc);
 
         multRotationX(90);
         multScale([0.12, 0.12, 0.12]);
@@ -276,6 +277,9 @@ function setup(shaders) {
         multTranslation([0, -0.32, 0]);
 
         multTranslation([-0.5, 0.5, 0]);
+
+        multRotationZ(-rc);
+
         multRotationX(90);
 
         multScale([0.121, 0.121, 0.121]);
@@ -438,17 +442,20 @@ function setup(shaders) {
     }
 
     function Cannon() {
-
         pushMatrix();
-
 
         gl.uniform3f(uColorLocation, 0.25, 0.25, 0.25);
 
 
-        multTranslation([-0.4, 0.08, 0]);
-        multRotationZ(45);
-        multTranslation([0, 0.7, 0]);
+        multTranslation([0, -0.32, 0]);
+        multTranslation([-0.5, 0.5, 0]);
 
+
+        multRotationZ(rc);
+
+
+        multRotationZ(45);
+        multTranslation([0, 0.6, 0]);
 
         multScale([0.025, 1.2, 0.025]);
         uploadModelView();
@@ -456,13 +463,16 @@ function setup(shaders) {
 
         popMatrix();
 
-
         pushMatrix();
 
         gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
-        multTranslation([-0.4, 0.08, 0]);
+
+
+        multTranslation([0, -0.32, 0]);
+        multTranslation([-0.5, 0.5, 0]);
+        multRotationZ(rc);
         multRotationZ(45);
-        multTranslation([0, 0.7, 0]);
+        multTranslation([0, 0.6, 0]);
 
         multScale([0.025, 1.2, 0.025]);
         uploadModelView();
@@ -476,50 +486,51 @@ function setup(shaders) {
      * Tanque Main
      */
     function Tank() {
-
         pushMatrix();
         multTranslation([0, 0.08, 0]);
 
+        // FIXED PARTS when rotating with A and D 
         pushMatrix();
-
         multTranslation([0, 0.1, 0]);
         Base();
-
         popMatrix();
 
         pushMatrix();
-
         wheels();
-
         popMatrix();
 
         pushMatrix();
-
-        multTranslation([0, 0.23, 0]);
-        rotatinThingy();
-
-        popMatrix();
-
-        pushMatrix();
-
-
-        topHalfSphere();
-
-        popMatrix();
-        pushMatrix();
-
-        topSphereComplement();
-        popMatrix();
-
-        pushMatrix();
-
         multTranslation([0, 0.23, 0]);
         TankMiddleLayer();
         popMatrix();
 
+        // Everything from here rotates with A and D
+        pushMatrix();
+
+        multRotationY(rb);
+
+
+        pushMatrix();
+        multTranslation([0, 0.23, 0]);
+        rotatinThingy();
+        popMatrix();
+
+
+        pushMatrix();
+        topHalfSphere();
+        popMatrix();
+
+
+        pushMatrix();
+        topSphereComplement();
+        popMatrix();
+
+
         pushMatrix();
         multTranslation([0, 0.40, 0]);
         TankUpperL_Cabin();
+        popMatrix();
+
         popMatrix();
 
         popMatrix();
