@@ -39,6 +39,8 @@ function setup(shaders) {
     let rb = 0;
     let rc = 0;
 
+    let wheelRotation = 0;
+
     resize_canvas();
     window.addEventListener("resize", resize_canvas);
 
@@ -61,19 +63,19 @@ function setup(shaders) {
     document.onkeydown = function (event) {
         switch (event.key) {
             case '1':
-                mView = lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0]);
+                mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
 
                 viewSize = 0.8;
                 break;
             case '2':
                 // Top view
-                mView = lookAt([0, 5, 0], [0, 0.3, 0], [0, 0, -1]);
+                mView = lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0])
 
                 viewSize = 1.0;
                 break;
             case '3':
                 // Right view 
-                mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
+                mView = lookAt([0, 5, 0], [0, 0.3, 0], [0, 0, -1])
                 viewSize = 0.8;
 
                 break;
@@ -102,10 +104,12 @@ function setup(shaders) {
                 ag = Math.max(0, ag - 0.005);
                 break;
             case 'q':
-                rg += 1;
+                rg += 0.01;
+                wheelRotation -= 15;
                 break;
             case 'e':
-                rg -= 1;
+                rg -= 0.01;
+                wheelRotation += 15;
                 break;
             case 'w':
                 rc = Math.min(60, rc + 1); //here the first number is max angle it can go in the animation 
@@ -259,7 +263,7 @@ function setup(shaders) {
         multTranslation([0, -0.32, 0]);
         multTranslation([-0.5, 0.5, 0]);
 
-        multRotationZ(-rc);
+        multRotationZ(rc);
 
         multRotationX(90);
         multScale([0.12, 0.12, 0.12]);
@@ -278,7 +282,7 @@ function setup(shaders) {
 
         multTranslation([-0.5, 0.5, 0]);
 
-        multRotationZ(-rc);
+        multRotationZ(rc);
 
         multRotationX(90);
 
@@ -366,6 +370,7 @@ function setup(shaders) {
             pushMatrix();
             multTranslation([xPos, localYCenter, zPosRight]);
             multRotationX(90);
+            multRotationY(wheelRotation);
 
 
             gl.uniform3f(uColorLocation, 0.2, 0.2, 0.2);
@@ -487,7 +492,7 @@ function setup(shaders) {
      */
     function Tank() {
         pushMatrix();
-        multTranslation([0, 0.08, 0]);
+        multTranslation([rg, 0.08, 0]);
 
         // FIXED PARTS when rotating with A and D 
         pushMatrix();
