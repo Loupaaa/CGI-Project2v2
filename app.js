@@ -39,6 +39,10 @@ function setup(shaders) {
     let rb = 0;
     let rc = 0;
 
+    let tomatoes = []; // Array to store ammunition AKA tomatoes 
+    const TOMATO_SPEED = 2.0;
+
+
     let wheelRotation = 0;
 
     resize_canvas();
@@ -129,6 +133,9 @@ function setup(shaders) {
             case '-':
                 zoom *= 1.1;
                 break;
+            case 'z':
+                shootTomatoes();
+                break;
         }
     }
 
@@ -169,6 +176,60 @@ function setup(shaders) {
 
     function uploadMatrix(name, m) {
         gl.uniformMatrix4fv(gl.getUniformLocation(program, name), false, flatten(m));
+    }
+
+    function createTomatoes() {
+        for (let i = 0; i < tomatoes.length; i++) {
+            const tomato = tomatoes[i];
+
+            pushMatrix();
+
+            gl.uniform3f(uColorLocation, 1.0, 0.2, 0.2);
+            multTranslation([tomato.x, tomato.y, tomato.z]);
+            multScale([0.05, 0.05, 0.05]);
+
+            uploadModelView();
+            SPHERE.draw(gl, program, gl.TRIANGLES);
+
+            popMatrix();
+        }
+    }
+
+    function shootTomatoes() {
+        const cannonInfo = getTomatoInitPosition();
+
+        const Tomato = {
+            x: cannonInfo.tipX,
+            y: cannonInfo.tipY,
+            z: cannonInfo.tipZ,
+            speedX: cannonInfo.dirX * TOMATO_SPEED,
+            speedY: cannonInfo.dirY * TOMATO_SPEED,
+            speedZ: cannonInfo.dirZ * TOMATO_SPEED,
+            alive: 5.0
+        };
+
+        tomatoes.push(Tomato);
+    }
+
+    function animateTomatoes() {
+        const gravityAceleration = -0.98;
+        const deltaTime = 0.016;
+
+        for (let i = tomatoes.length - 1; i >= 0; i--) {
+            const tomato = tomatoes[i];
+
+            tomato.x += tomato.speedX * deltaTime;
+            tomato.y += tomato.speedY * deltaTime;
+            tomato.z += tomato.speedZ * deltaTime;
+
+            tomato.speedY += gravityAceleration * deltaTime;
+
+            tomato.timeAlive -= deltaTime;
+
+            if (tomato.y < 0 || tomato.alive <= 0) {
+                tomatoes.splice(i, 1);
+            }
+        }
     }
 
 
@@ -605,7 +666,8 @@ function setup(shaders) {
         // Load the ModelView matrix with the Worl to Camera (View) matrix
         loadMatrix(mView);
 
-        //new
+        createTomatoes();
+        animateTomatoes();
 
         ground(uColorLocation, 11, 11, 0.5666666666666667);
 
