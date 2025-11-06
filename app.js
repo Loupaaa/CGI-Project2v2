@@ -80,8 +80,8 @@ function setup(shaders) {
 
 
 
-    let gamma = 0;
-    let theta = 0;
+    let gamma = 0.2;
+    let theta = 0.1;
 
     let ag = 0;
     let rg = 0;
@@ -133,6 +133,7 @@ function setup(shaders) {
 
             case '0':
                 isSplitView = !isSplitView;
+                isOblique = true;
                 resize_canvas(); // Re-calculate viewport dimensions
                 break;
             case '1':
@@ -796,7 +797,7 @@ function setup(shaders) {
                 let mv = mView;
 
 
-                if (currentView === 4) { // Se for a Vista 4
+                if (i == 3 && isOblique == true) { // Se for a Vista 4
                     if (isOblique) { // E o modo oblíquo/spin estiver ATIVO
 
                         // A. APLICAR O SHEAR OBLÍQUO (da slide)
@@ -827,6 +828,9 @@ function setup(shaders) {
                         mv = lookAt([eyeX, eyeY, eyeZ], at, [0, 1, 0]); // Recalcula a 'mv'
                     }
                 }
+                uploadMatrix("u_projection", mP);
+                loadMatrix(mv);
+                drawScene();
             }
         } else {
 
