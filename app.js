@@ -8,15 +8,58 @@ import * as SPHERE from '../../libs/objects/sphere.js'
 import * as TORUS from '../../libs/objects/torus.js'
 
 
-
+let gamma = 0.5;
+let theta = 0.5;
 
 
 function setup(shaders) {
     let canvas = document.getElementById("gl-canvas");
+    let overlayPanel = document.getElementById("overlay");
     let aspect = canvas.width / canvas.height;
 
     /** @type WebGL2RenderingContext */
     let gl = setupWebGL(canvas);
+
+    let isSplitView = false;
+
+    // Define four separate view configurations
+    let viewports = [
+        {
+            // View 1 (Left View)
+            mView: lookAt([-5, 0.3, 0], [0, 0.3, 0], [0, 1, 0]),
+            zoom: 1.0,
+            viewSize: 0.8,
+            isOblique: false,
+            // Viewport bounds in pixels (set in resize_canvas)
+            x: 0, y: 0, w: 0, h: 0
+        },
+        {
+            // View 2 (Top View)
+            mView: lookAt([0, 5, 0], [0, 0.3, 0], [0, 0, -1]), // Adjusted 3 view to be the top view, and 2 to be the right view
+            zoom: 1.0,
+            viewSize: 1.0,
+            isOblique: false,
+            x: 0, y: 0, w: 0, h: 0
+        },
+        {
+            // View 3 (Right View)
+            mView: lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0]), // Adjusted 2 view to be the right view
+            zoom: 1.0,
+            viewSize: 0.8,
+            isOblique: false,
+            x: 0, y: 0, w: 0, h: 0
+        },
+        {
+            // View 4 (Perspective View)
+            mView: lookAt([2, 1.2, 5], [0, 0.3, 0], [0, 1, 0]),
+            zoom: 1.0,
+            viewSize: 1.5,
+            isOblique: false,
+            x: 0, y: 0, w: 0, h: 0
+        }
+    ];
+
+
 
     // Drawing mode (gl.LINES or gl.TRIANGLES)
     let mode = gl.TRIANGLES;
@@ -32,21 +75,20 @@ function setup(shaders) {
     let currentView = 1;
     let isOblique = false;
 
-    let gamma = 0.5;
-    let theta = 0.5;
+
 
     let zoom = 1.0;
 
     let viewSize = 0.8;
 
 
-    /** Model parameters */
+
     let ag = 0;
     let rg = 0;
     let rb = 0;
     let rc = 0;
 
-    let tomatoes = []; // Array to store ammunition AKA tomatoes 
+    let tomatoes = [];
     const TOMATO_SPEED = 2.0;
 
 
@@ -58,21 +100,41 @@ function setup(shaders) {
     canvas.addEventListener("wheel", function (event) {
         event.preventDefault();
 
-
+        let zoomFactor;
         if (event.deltaY < 0) {
-
-            zoom /= 1.1;
+            // Zoom In
+            zoom /= 1.1; // Divide by 1.1
+            zoomFactor = 1 / 1.1;
         } else {
-
-            zoom *= 1.1;
+            // Zoom Out
+            zoom *= 1.1; // Multiply by 1.1
+            zoomFactor = 1.1;
         }
 
+        if (isSplitView) {
+            viewports.forEach(v => {
+                v.zoom *= zoomFactor;
+            });
+        } else {
 
-        resize_canvas();
+            resize_canvas();
+        }
     });
 
     document.onkeydown = function (event) {
         switch (event.key) {
+            case 'h':
+                if (overlayPanel.style.display === "none") {
+                    overlayPanel.style.display = "block"; // Show the panel
+                } else {
+                    overlayPanel.style.display = "none";  // Hide the panel
+                }
+                break;
+                break;
+            case '0':
+                isSplitView = !isSplitView;
+                resize_canvas(); // Re-calculate viewport dimensions
+                break;
             case '1':
                 mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
                 currentView = 1;
@@ -102,7 +164,6 @@ function setup(shaders) {
                 isOblique = false;
 
                 break;
-
             case '8':
                 if (currentView == 4) {
                     isOblique = !isOblique;
@@ -138,24 +199,24 @@ function setup(shaders) {
                 ag = Math.max(0, ag - 0.005);
                 break;
             case 'q':
-                rg += 0.01;
+                rg -= 0.01;
                 wheelRotation -= 15;
                 break;
             case 'e':
-                rg -= 0.01;
+                rg += 0.01;
                 wheelRotation += 15;
                 break;
             case 'w':
-                rc = Math.min(60, rc + 1); //here the first number is max angle it can go in the animation 
+                rc = Math.max(-30, rc - 1); //here the first number is max angle it can go in the animation 
                 break;
             case 's':
-                rc = Math.max(-30, rc - 1);
+                rc = Math.min(60, rc + 1);
                 break;
             case 'a':
-                rb = Math.max(-40, rb - 1);
+                rb = Math.min(40, rb + 1);
                 break;
             case 'd':
-                rb = Math.min(40, rb + 1);
+                rb = Math.max(-40, rb - 1);
                 break;
             case '+':
                 zoom /= 1.1;
@@ -183,17 +244,46 @@ function setup(shaders) {
     function resize_canvas(event) {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        aspect = canvas.width / canvas.height; // Keep global aspect for single-view mode
 
-        aspect = canvas.width / canvas.height;
+        if (isSplitView) {
+            // Calculate 4-quadrant dimensions
+            let w2 = Math.floor(canvas.width / 2);
+            let h2 = Math.floor(canvas.height / 2);
 
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        if (aspect > 1) {
-            //  WIDE 
-            mProjection = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -10, 10);
-        } else {
-            // TALL
-            mProjection = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -10, 10);
+            // View 1 (Bottom-Left)
+            viewports[0].x = 0;
+            viewports[0].y = 0;
+            viewports[0].w = w2;
+            viewports[0].h = h2;
+
+            // View 2 (Bottom-Right)
+            viewports[1].x = w2;
+            viewports[1].y = 0;
+            viewports[1].w = canvas.width - w2;
+            viewports[1].h = h2;
+
+            // View 3 (Top-Left)
+            viewports[2].x = 0;
+            viewports[2].y = h2;
+            viewports[2].w = w2;
+            viewports[2].h = canvas.height - h2;
+
+            // View 4 (Top-Right)
+            viewports[3].x = w2;
+            viewports[3].y = h2;
+            viewports[3].w = canvas.width - w2;
+            viewports[3].h = canvas.height - h2;
         }
+        // In single-view mode, the render() function will handle setting the gl.viewport
+    }
+    /**
+     * Draws all models in the scene.
+     */
+    function drawScene() {
+        createTomatoes();
+        ground(uColorLocation, 11, 11, 0.5666666666666667);
+        Tank();
     }
 
     function uploadProjection() {
@@ -677,43 +767,76 @@ function setup(shaders) {
         window.requestAnimationFrame(render);
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
         gl.useProgram(program);
 
-
-        let mP;
-        if (aspect > 1) {
-            mP = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -20, 20);
-        } else {
-            mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
-        }
-
-
-        if (currentView === 4 && isOblique) {
-
-            let obliqueMatrix = [
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                -gamma, -theta, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0
-            ];
-
-            mP = mult(mP, obliqueMatrix);
-        }
-
-        // 3. Define a projeção final
-        mProjection = mP;
-        uploadProjection();
-
-        // Load the ModelView matrix with the Worl to Camera (View) matrix
-        loadMatrix(mView);
-
-        createTomatoes();
+        // Animate physics once per frame
         animateTomatoes();
 
-        ground(uColorLocation, 11, 11, 0.5666666666666667);
+        if (isSplitView) {
 
-        Tank();
+            for (let i = 0; i < viewports.length; i++) {
+                let v = viewports[i];
+
+
+                gl.viewport(v.x, v.y, v.w, v.h);
+
+
+                let vpAspect = v.w / v.h;
+                let vSize = v.viewSize;
+                let vZoom = v.zoom;
+
+                let mP;
+                if (vpAspect > 1) {
+                    mP = ortho(-vSize * vpAspect * vZoom, vSize * vpAspect * vZoom, -vSize * vZoom, vSize * vZoom, -20, 20);
+                } else {
+                    mP = ortho(-vSize * vZoom, vSize * vZoom, -vSize / vpAspect * vZoom, vSize / vpAspect * vZoom, -20, 20);
+                }
+
+
+                if (i === 3 && isOblique) {
+                    let obliqueMatrix = [
+                        1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        Math.sin(gamma), Math.cos(theta), 1.0, 0.0,
+                        0.0, 0.0, 0.0, 1.0
+                    ];
+                    mP = mult(mP, obliqueMatrix);
+                }
+
+
+                uploadMatrix("u_projection", mP);
+
+
+                loadMatrix(v.mView);
+
+
+                drawScene();
+            }
+        } else {
+
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            let mP;
+            if (aspect > 1) {
+                mP = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -20, 20);
+            } else {
+                mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
+            }
+
+            if (currentView === 4 && isOblique) {
+                let obliqueMatrix = [
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    Math.sin(gamma), Math.cos(theta), 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                ];
+                mP = mult(mP, obliqueMatrix);
+            }
+
+            uploadMatrix("u_projection", mP);
+            loadMatrix(mView);
+            drawScene();
+        }
     }
 }
 
