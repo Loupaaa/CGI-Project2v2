@@ -1,12 +1,12 @@
 import { buildProgramFromSources, loadShadersFromURLS, setupWebGL } from "../../libs/utils.js";
-import { ortho, lookAt, flatten, perspective, } from "../../libs/MV.js";
+import { ortho, lookAt, flatten, perspective, mult } from "../../libs/MV.js";
 import { modelView, loadMatrix, multRotationX, multRotationY, multRotationZ, multScale, multTranslation, popMatrix, pushMatrix } from "../../libs/stack.js";
 
 import * as CUBE from '../../libs/objects/cube.js';
 import * as CYLINDER from '../../libs/objects/cylinder.js'
 import * as SPHERE from '../../libs/objects/sphere.js'
 import * as TORUS from '../../libs/objects/torus.js'
-import { mult } from "./libs/MV.js";
+
 
 
 
@@ -27,6 +27,13 @@ function setup(shaders) {
 
     let mProjection = ortho(-1 * aspect, aspect, -1, 1, -10, 10);
     let mView = lookAt([2, 1.2, 5], [0, 0, 0], [0, 1, 0]);
+
+
+    let currentView = 1;
+    let isOblique = false;
+
+    let gamma = 0.5;
+    let theta = 0.5;
 
     let zoom = 1.0;
 
@@ -68,33 +75,39 @@ function setup(shaders) {
         switch (event.key) {
             case '1':
                 mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
-
+                currentView = 1;
                 viewSize = 0.8;
+                isOblique = false;
                 break;
             case '2':
                 // Top view
                 mView = lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0])
-
+                currentView = 2;
                 viewSize = 1.0;
+                isOblique = false;
                 break;
             case '3':
                 // Right view 
                 mView = lookAt([0, 5, 0], [0, 0.3, 0], [0, 0, -1])
+                currentView = 3;
                 viewSize = 0.8;
-
+                isOblique = false;
                 break;
             case '4':
 
 
-                // Multiplica a projeção ortográfica pela matriz de cisalhamento
-                mProjection = mult(mProjection, oblique);
+                mView = lookAt([2, 1.2, 5], [0, 0.3, 0], [0, 1, 0]);
+                viewSize = 1.5;
+                currentView = 4;
+                isOblique = false;
 
-                // Mantém a câmara fixa
-                mView = lookAt([0, 1, 0], [0, 0, 0], [0, 1, 0]);
-
-                viewSize = 3.0;
                 break;
 
+            case '8':
+                if (currentView == 4) {
+                    isOblique = !isOblique;
+                }
+                break;
             case '9':
                 mode = gl.LINES;
                 break;
@@ -651,16 +664,28 @@ function setup(shaders) {
         gl.useProgram(program);
 
 
-
-        // Send the mProjection matrix to the GLSL program
+        let mP;
         if (aspect > 1) {
-            // WIDE
-            mProjection = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -10, 10);
-        } else {
-            // TALL
-            mProjection = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -10, 10);
+            mP = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -20, 20);
+        } else { 
+            mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
         }
 
+      
+        if (currentView === 4 && isOblique) {
+ 
+            let obliqueMatrix = [
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                -gamma, -theta, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0
+            ];
+
+            mP = mult(mP, obliqueMatrix);
+        }
+
+        // 3. Define a projeção final
+        mProjection = mP;
         uploadProjection();
 
         // Load the ModelView matrix with the Worl to Camera (View) matrix
