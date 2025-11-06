@@ -108,6 +108,23 @@ function setup(shaders) {
                     isOblique = !isOblique;
                 }
                 break;
+
+            case 'ArrowUp':
+
+                theta = Math.min(1.0, theta + 0.05);
+                break;
+            case 'ArrowDown':
+
+                theta = Math.max(-1.0, theta - 0.05);
+                break;
+            case 'ArrowLeft':
+
+                gamma = Math.max(-1.0, gamma - 0.05);
+                break;
+            case 'ArrowRight':
+
+                gamma = Math.min(1.0, gamma + 0.05);
+                break;
             case '9':
                 mode = gl.LINES;
                 break;
@@ -667,13 +684,13 @@ function setup(shaders) {
         let mP;
         if (aspect > 1) {
             mP = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -20, 20);
-        } else { 
+        } else {
             mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
         }
 
-      
+
         if (currentView === 4 && isOblique) {
- 
+
             let obliqueMatrix = [
                 1.0, 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0, 0.0,
