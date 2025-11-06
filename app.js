@@ -1,5 +1,5 @@
 import { buildProgramFromSources, loadShadersFromURLS, setupWebGL } from "../../libs/utils.js";
-import { ortho, lookAt, flatten, perspective, mult } from "../../libs/MV.js";
+import { ortho, lookAt, flatten, perspective, mult, mat4 } from "../../libs/MV.js";
 import { modelView, loadMatrix, multRotationX, multRotationY, multRotationZ, multScale, multTranslation, popMatrix, pushMatrix } from "../../libs/stack.js";
 
 import * as CUBE from '../../libs/objects/cube.js';
@@ -7,9 +7,6 @@ import * as CYLINDER from '../../libs/objects/cylinder.js'
 import * as SPHERE from '../../libs/objects/sphere.js'
 import * as TORUS from '../../libs/objects/torus.js'
 
-
-let gamma = 0.5;
-let theta = 0.5;
 
 
 function setup(shaders) {
@@ -83,13 +80,16 @@ function setup(shaders) {
 
 
 
+    let gamma = 0;
+    let theta = 0;
+
     let ag = 0;
     let rg = 0;
     let rb = 0;
     let rc = 0;
 
-    let tomatoes = [];
-    const TOMATO_SPEED = 2.0;
+    // let tomatoes = [];
+    // const TOMATO_SPEED = 2.0;
 
 
     let wheelRotation = 0;
@@ -130,7 +130,7 @@ function setup(shaders) {
                     overlayPanel.style.display = "none";  // Hide the panel
                 }
                 break;
-                break;
+
             case '0':
                 isSplitView = !isSplitView;
                 resize_canvas(); // Re-calculate viewport dimensions
@@ -140,6 +140,7 @@ function setup(shaders) {
                 currentView = 1;
                 viewSize = 0.8;
                 isOblique = false;
+                isSplitView = false;
                 break;
             case '2':
                 // Top view
@@ -147,6 +148,7 @@ function setup(shaders) {
                 currentView = 2;
                 viewSize = 1.0;
                 isOblique = false;
+                isSplitView = false;
                 break;
             case '3':
                 // Right view 
@@ -154,49 +156,55 @@ function setup(shaders) {
                 currentView = 3;
                 viewSize = 0.8;
                 isOblique = false;
+                isSplitView = false;
                 break;
             case '4':
-
-
                 mView = lookAt([2, 1.2, 5], [0, 0.3, 0], [0, 1, 0]);
                 viewSize = 1.5;
                 currentView = 4;
-                isOblique = false;
-
+                isOblique = true;
+                isSplitView = false;
                 break;
+
             case '8':
+                if (currentView == 4) {
+                    isOblique = !isOblique;
+                }
+                break;
+            case '9':
+                if (currentView == 4) {
+                    isOblique = !isOblique;
+                }
+                break;
+            case '//':
                 if (currentView == 4) {
                     isOblique = !isOblique;
                 }
                 break;
 
             case 'ArrowUp':
-
-                theta = Math.min(1.0, theta + 0.05);
+                if (isOblique) { // Check if we are in the special mode
+                    theta = Math.min(1.0, theta + 0.001);
+                }
+                event.preventDefault()
                 break;
             case 'ArrowDown':
-
-                theta = Math.max(-1.0, theta - 0.05);
+                if (isOblique) { // Check if we are in the special mode
+                    theta = Math.max(-1.0, theta - 0.001);
+                }
+                event.preventDefault()
                 break;
             case 'ArrowLeft':
-
-                gamma = Math.max(-1.0, gamma - 0.05);
+                if (isOblique) { // Check if we are in the special mode
+                    gamma = Math.max(-1.0, gamma - 0.001);
+                }
+                event.preventDefault()
                 break;
             case 'ArrowRight':
-
-                gamma = Math.min(1.0, gamma + 0.05);
-                break;
-            case '9':
-                mode = gl.LINES;
-                break;
-            case '0':
-                mode = gl.TRIANGLES;
-                break;
-            case 'p':
-                ag = Math.min(0.050, ag + 0.005);
-                break;
-            case 'o':
-                ag = Math.max(0, ag - 0.005);
+                if (isOblique) { // Check if we are in the special mode
+                    gamma = Math.min(1.0, gamma + 0.001);
+                }
+                event.preventDefault()
                 break;
             case 'q':
                 rg -= 0.01;
@@ -217,12 +225,6 @@ function setup(shaders) {
                 break;
             case 'd':
                 rb = Math.max(-40, rb - 1);
-                break;
-            case '+':
-                zoom /= 1.1;
-                break;
-            case '-':
-                zoom *= 1.1;
                 break;
             case 'z':
                 shootTomatoes();
@@ -281,7 +283,7 @@ function setup(shaders) {
      * Draws all models in the scene.
      */
     function drawScene() {
-        createTomatoes();
+        // createTomatoes();
         ground(uColorLocation, 11, 11, 0.5666666666666667);
         Tank();
     }
@@ -298,59 +300,59 @@ function setup(shaders) {
         gl.uniformMatrix4fv(gl.getUniformLocation(program, name), false, flatten(m));
     }
 
-    function createTomatoes() {
-        for (let i = 0; i < tomatoes.length; i++) {
-            const tomato = tomatoes[i];
+    // function createTomatoes() {
+    //     for (let i = 0; i < tomatoes.length; i++) {
+    //         const tomato = tomatoes[i];
 
-            pushMatrix();
+    //         pushMatrix();
 
-            gl.uniform3f(uColorLocation, 1.0, 0.2, 0.2);
-            multTranslation([tomato.x, tomato.y, tomato.z]);
-            multScale([0.05, 0.05, 0.05]);
+    //         gl.uniform3f(uColorLocation, 1.0, 0.2, 0.2);
+    //         multTranslation([tomato.x, tomato.y, tomato.z]);
+    //         multScale([0.05, 0.05, 0.05]);
 
-            uploadModelView();
-            SPHERE.draw(gl, program, gl.TRIANGLES);
+    //         uploadModelView();
+    //         SPHERE.draw(gl, program, gl.TRIANGLES);
 
-            popMatrix();
-        }
-    }
+    //         popMatrix();
+    //     }
+    // }
 
-    function shootTomatoes() {
-        const cannonInfo = getTomatoInitPosition();
+    // function shootTomatoes() {
+    //     const cannonInfo = getTomatoInitPosition();
 
-        const Tomato = {
-            x: cannonInfo.tipX,
-            y: cannonInfo.tipY,
-            z: cannonInfo.tipZ,
-            speedX: cannonInfo.dirX * TOMATO_SPEED,
-            speedY: cannonInfo.dirY * TOMATO_SPEED,
-            speedZ: cannonInfo.dirZ * TOMATO_SPEED,
-            alive: 5.0
-        };
+    //     const Tomato = {
+    //         x: cannonInfo.tipX,
+    //         y: cannonInfo.tipY,
+    //         z: cannonInfo.tipZ,
+    //         speedX: cannonInfo.dirX * TOMATO_SPEED,
+    //         speedY: cannonInfo.dirY * TOMATO_SPEED,
+    //         speedZ: cannonInfo.dirZ * TOMATO_SPEED,
+    //         alive: 5.0
+    //     };
 
-        tomatoes.push(Tomato);
-    }
+    //     tomatoes.push(Tomato);
+    // }
 
-    function animateTomatoes() {
-        const gravityAceleration = -0.98;
-        const deltaTime = 0.016;
+    // function animateTomatoes() {
+    //     const gravityAceleration = -0.98;
+    //     const deltaTime = 0.016;
 
-        for (let i = tomatoes.length - 1; i >= 0; i--) {
-            const tomato = tomatoes[i];
+    //     for (let i = tomatoes.length - 1; i >= 0; i--) {
+    //         const tomato = tomatoes[i];
 
-            tomato.x += tomato.speedX * deltaTime;
-            tomato.y += tomato.speedY * deltaTime;
-            tomato.z += tomato.speedZ * deltaTime;
+    //         tomato.x += tomato.speedX * deltaTime;
+    //         tomato.y += tomato.speedY * deltaTime;
+    //         tomato.z += tomato.speedZ * deltaTime;
 
-            tomato.speedY += gravityAceleration * deltaTime;
+    //         tomato.speedY += gravityAceleration * deltaTime;
 
-            tomato.timeAlive -= deltaTime;
+    //         tomato.timeAlive -= deltaTime;
 
-            if (tomato.y < 0 || tomato.alive <= 0) {
-                tomatoes.splice(i, 1);
-            }
-        }
-    }
+    //         if (tomato.y < 0 || tomato.alive <= 0) {
+    //             tomatoes.splice(i, 1);
+    //         }
+    //     }
+    // }
 
 
     /**
@@ -770,7 +772,7 @@ function setup(shaders) {
         gl.useProgram(program);
 
         // Animate physics once per frame
-        animateTomatoes();
+        // animateTomatoes();
 
         if (isSplitView) {
 
@@ -791,26 +793,40 @@ function setup(shaders) {
                 } else {
                     mP = ortho(-vSize * vZoom, vSize * vZoom, -vSize / vpAspect * vZoom, vSize / vpAspect * vZoom, -20, 20);
                 }
+                let mv = mView;
 
 
-                if (i === 3 && isOblique) {
-                    let obliqueMatrix = [
-                        1.0, 0.0, 0.0, 0.0,
-                        0.0, 1.0, 0.0, 0.0,
-                        Math.sin(gamma), Math.cos(theta), 1.0, 0.0,
-                        0.0, 0.0, 0.0, 1.0
-                    ];
-                    mP = mult(mP, obliqueMatrix);
+                if (currentView === 4) { // Se for a Vista 4
+                    if (isOblique) { // E o modo oblíquo/spin estiver ATIVO
+
+                        // A. APLICAR O SHEAR OBLÍQUO (da slide)
+                        const L = 0.5;
+                        const alpha = 45 * Math.PI / 180;
+
+                        let obliqueMatrix = mat4(
+                            1.0, 0.0, 0.0, 0.0,
+                            0.0, 1.0, 0.0, 0.0,
+                            -L * Math.cos(alpha), -L * Math.sin(alpha), 1.0, 0.0,
+                            0.0, 0.0, 0.0, 1.0
+                        );
+                        mP = mult(mP, obliqueMatrix); // Modifica a projeção 'mP'
+
+                        // B. APLICAR O "SPIN" DA CÂMARA (o que você quer)
+                        const R = 5.0;
+                        const at = [0, 0.3, 0];
+
+                        let azimuth = gamma * Math.PI;
+                        let elevation = theta * Math.PI / 2;
+
+                        let eyeX = at[0] + R * Math.cos(elevation) * Math.sin(azimuth);
+                        let eyeY = at[1] + R * Math.sin(elevation);
+                        let eyeZ = at[2] + R * Math.cos(elevation) * Math.cos(azimuth);
+
+                        if (eyeY < -R + 0.01) eyeY = -R + 0.01;
+
+                        mv = lookAt([eyeX, eyeY, eyeZ], at, [0, 1, 0]); // Recalcula a 'mv'
+                    }
                 }
-
-
-                uploadMatrix("u_projection", mP);
-
-
-                loadMatrix(v.mView);
-
-
-                drawScene();
             }
         } else {
 
@@ -822,19 +838,45 @@ function setup(shaders) {
             } else {
                 mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
             }
+            let mv = mView;
 
-            if (currentView === 4 && isOblique) {
-                let obliqueMatrix = [
-                    1.0, 0.0, 0.0, 0.0,
-                    0.0, 1.0, 0.0, 0.0,
-                    Math.sin(gamma), Math.cos(theta), 1.0, 0.0,
-                    0.0, 0.0, 0.0, 1.0
-                ];
-                mP = mult(mP, obliqueMatrix);
+
+            if (currentView === 4) {
+                if (isOblique) {
+
+                    // copia dos slides
+                    const L = 0.5;
+                    const alpha = 45 * Math.PI / 180;
+
+                    let obliqueMatrix = mat4(
+                        1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        -L * Math.cos(alpha), -L * Math.sin(alpha), 1.0, 0.0,
+                        0.0, 0.0, 0.0, 1.0
+                    );
+                    mP = mult(mP, obliqueMatrix); // Modifica a projeção 'mP'
+
+                    // B. APLICAR O "SPIN" DA CÂMARA (o que você quer)
+                    const R = 5.0;
+                    const at = [0, 0.3, 0];
+
+                    let side = gamma * Math.PI;
+                    let elevation = theta * Math.PI / 2;
+
+                    let eyeX = at[0] + R * Math.cos(elevation) * Math.sin(side);
+                    let eyeY = at[1] + R * Math.sin(elevation);
+                    let eyeZ = at[2] + R * Math.cos(elevation) * Math.cos(side);
+
+                    if (eyeY < -R + 0.01) eyeY = -R + 0.01;
+
+                    mv = lookAt([eyeX, eyeY, eyeZ], at, [0, 1, 0]); // Recalcula a 'mv'
+                }
             }
+            // --- FIM DA LÓGICA CORRIGIDA ---
 
+            // 3. Upload das matrizes e desenhar
             uploadMatrix("u_projection", mP);
-            loadMatrix(mView);
+            loadMatrix(mv);
             drawScene();
         }
     }
