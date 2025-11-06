@@ -67,13 +67,13 @@ function setup(shaders) {
     document.onkeydown = function (event) {
         switch (event.key) {
             case '1':
-                mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
+                mView = lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0])
 
                 viewSize = 0.8;
                 break;
             case '2':
                 // Top view
-                mView = lookAt([0, 0.3, 5], [0, 0.3, 0], [0, 1, 0])
+                mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
 
                 viewSize = 1.0;
                 break;
