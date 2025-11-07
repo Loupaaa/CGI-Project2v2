@@ -80,7 +80,7 @@ function setup(shaders) {
     let rc = 0;
 
     let wheelRotation = 0;
-    
+
     let wireframeMode = 0;
 
     resize_canvas();
@@ -207,6 +207,17 @@ function setup(shaders) {
             case ' ':
                 wireframeMode = (wireframeMode + 1) % 3;
                 event.preventDefault();
+                break;
+            case 'r':
+
+                zoom = 1.0;
+                if (isSplitView) {
+                    viewports.forEach(v => {
+                        v.zoom = 1.0;
+                    });
+                }
+                gamma = 0.2;
+                theta = 0.1;
                 break;
         }
     }
@@ -599,22 +610,41 @@ function setup(shaders) {
         const groundY = -tileHeight / 2;
         const whiteTile = [0.8, 0.8, 0.8];
         const darkTile = [0.5, 0.5, 0.5];
+        const whiteTileLine = [0.6, 0.6, 0.6];
+        const darkTileLine = [0.3, 0.3, 0.3];
 
         for (let x = 0; x < tilesX; x++) {
             for (let z = 0; z < tilesZ; z++) {
-                if ((x + z) % 2 == 0) {
-                    gl.uniform3fv(uColorLocation, whiteTile);
-                } else {
-                    gl.uniform3fv(uColorLocation, darkTile);
-                }
+                const isWhiteTile = (x + z) % 2 == 0;
 
                 pushMatrix();
                 const offsetX = -(tilesX * tileSize) / 2 + tileSize / 2;
                 const offsetZ = -(tilesZ * tileSize) / 2 + tileSize / 2;
                 multTranslation([x * tileSize + offsetX, groundY, z * tileSize + offsetZ]);
                 multScale([tileSize, tileHeight, tileSize]);
-                uploadModelView();
-                CUBE.draw(gl, program, mode);
+
+                // Draw solid tiles
+                if (wireframeMode !== 2) {
+                    if (isWhiteTile) {
+                        gl.uniform3fv(uColorLocation, whiteTile);
+                    } else {
+                        gl.uniform3fv(uColorLocation, darkTile);
+                    }
+                    uploadModelView();
+                    CUBE.draw(gl, program, gl.TRIANGLES);
+                }
+
+                // Draw wireframe lines
+                if (wireframeMode !== 1) {
+                    if (isWhiteTile) {
+                        gl.uniform3fv(uColorLocation, whiteTileLine);
+                    } else {
+                        gl.uniform3fv(uColorLocation, darkTileLine);
+                    }
+                    uploadModelView();
+                    CUBE.draw(gl, program, gl.LINES);
+                }
+
                 popMatrix();
             }
         }
