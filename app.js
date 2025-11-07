@@ -232,7 +232,7 @@ function setup(shaders) {
 
     window.requestAnimationFrame(render);
 
-    function resize_canvas(event) {
+    function resize_canvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         aspect = canvas.width / canvas.height;
