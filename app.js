@@ -79,6 +79,7 @@ function setup(shaders) {
     let rb = 0;
     let rc = 0;
 
+
     let wheelRotation = 0;
 
     let wireframeMode = 0;
@@ -157,32 +158,28 @@ function setup(shaders) {
             case '9':
                 if (currentView == 4) {
                     isOblique = !isOblique;
+                    ;
                 }
                 break;
 
             case 'ArrowUp':
-                if (isOblique) {
-                    theta = Math.min(1.0, theta + 0.001);
-                }
-                event.preventDefault()
+                theta = Math.min(1.0, theta + 0.001);
+
                 break;
             case 'ArrowDown':
-                if (isOblique) {
-                    theta = Math.max(-1.0, theta - 0.001);
-                }
-                event.preventDefault()
+
+                theta = Math.max(-1.0, theta - 0.001);
+
                 break;
             case 'ArrowLeft':
-                if (isOblique) {
-                    gamma = Math.max(-1.0, gamma - 0.001);
-                }
-                event.preventDefault()
+
+                gamma = Math.max(-1.0, gamma - 0.001);
+
                 break;
             case 'ArrowRight':
-                if (isOblique) {
-                    gamma = Math.min(1.0, gamma + 0.001);
-                }
-                event.preventDefault()
+
+                gamma = Math.min(1.0, gamma + 0.001);
+
                 break;
             case 'q':
                 rg -= 0.01;
@@ -673,6 +670,7 @@ function setup(shaders) {
                 }
                 let mv = v.mView;
 
+                // Se for a 4ª vista E estiver em modo Oblíquo, aplica a distorção
                 if (i == 3 && isOblique == true) {
                     const L = 0.5;
                     const alpha = 45 * Math.PI / 180;
@@ -684,26 +682,32 @@ function setup(shaders) {
                         0.0, 0.0, 0.0, 1.0
                     );
                     mP = mult(mP, obliqueMatrix);
-
-                    const R = 5.0;
-                    const at = [0, 0.3, 0];
-
-                    let azimuth = gamma * Math.PI;
-                    let elevation = theta * Math.PI / 2;
-
-                    let eyeX = at[0] + R * Math.cos(elevation) * Math.sin(azimuth);
-                    let eyeY = at[1] + R * Math.sin(elevation);
-                    let eyeZ = at[2] + R * Math.cos(elevation) * Math.cos(azimuth);
-
-                    if (eyeY < -R + 0.01) eyeY = -R + 0.01;
-
-                    mv = lookAt([eyeX, eyeY, eyeZ], at, [0, 1, 0]);
                 }
+
                 uploadMatrix("u_projection", mP);
-                loadMatrix(mv);
-                drawScene();
+                loadMatrix(mv); // Carrega a vista
+
+                // Se for a 4ª vista, aplica as rotações
+                if (i == 3) {
+                    // Se NÃO estiver em modo oblíquo (logo, está em Axonométrico)
+                    if (isOblique == false) {
+                        // Esta é a tua "matriz axonométrica"!
+                        multRotationY(45);
+                        multRotationX(35.264); // Ângulo isométrico clássico
+                    }
+
+                    // Aplica as rotações do utilizador (gamma/theta) EM AMBOS OS MODOS
+                    let UpDown = gamma * 180.0;
+                    let LeftRight = theta * 90.0;
+                    multRotationY(UpDown);
+                    multRotationX(LeftRight);
+                }
+
+                drawScene(); // Desenha a cena para esta viewport
             }
-        } else {
+        }
+        else {
+            // --- MODO DE VISTA ÚNICA ---
             gl.viewport(0, 0, canvas.width, canvas.height);
 
             let mP;
@@ -714,41 +718,43 @@ function setup(shaders) {
             }
             let mv = mView;
 
-            if (currentView === 4) {
-                if (isOblique) {
-                    const L = 0.5;
-                    const alpha = 45 * Math.PI / 180;
+            // Se for a vista 4 E estiver em modo Oblíquo, aplica a distorção
+            if (currentView === 4 && isOblique) {
+                const L = 0.5;
+                const alpha = 45 * Math.PI / 180;
 
-                    let obliqueMatrix = mat4(
-                        1.0, 0.0, 0.0, 0.0,
-                        0.0, 1.0, 0.0, 0.0,
-                        -L * Math.cos(alpha), -L * Math.sin(alpha), 1.0, 0.0,
-                        0.0, 0.0, 0.0, 1.0
-                    );
-                    mP = mult(mP, obliqueMatrix);
-
-                    const R = 5.0;
-                    const at = [0, 0.3, 0];
-
-                    let side = gamma * Math.PI;
-                    let elevation = theta * Math.PI / 2;
-
-                    let eyeX = at[0] + R * Math.cos(elevation) * Math.sin(side);
-                    let eyeY = at[1] + R * Math.sin(elevation);
-                    let eyeZ = at[2] + R * Math.cos(elevation) * Math.cos(side);
-
-                    if (eyeY < -R + 0.01) eyeY = -R + 0.01;
-
-                    mv = lookAt([eyeX, eyeY, eyeZ], at, [0, 1, 0]);
-                }
+                let obliqueMatrix = mat4(
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    -L * Math.cos(alpha), -L * Math.sin(alpha), 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                );
+                mP = mult(mP, obliqueMatrix);
             }
 
             uploadMatrix("u_projection", mP);
             loadMatrix(mv);
+
+            if (currentView === 4) {
+
+                if (isOblique == false) {
+
+                    multRotationY(45);
+                    multRotationX(35.264);
+                }
+
+                let UpDown = gamma * 180.0;
+                let LeftRight = theta * 90.0;
+                multRotationY(UpDown);
+                multRotationX(LeftRight);
+            }
+
+
             drawScene();
         }
     }
 }
+
 
 const urls = ["shader.vert", "shader.frag"];
 loadShadersFromURLS(urls).then(shaders => setup(shaders))
