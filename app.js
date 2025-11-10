@@ -7,7 +7,53 @@ import * as CYLINDER from '../../libs/objects/cylinder.js'
 import * as SPHERE from '../../libs/objects/sphere.js'
 import * as TORUS from '../../libs/objects/torus.js'
 
+class Target {
+    constructor(coordinates) {
+        this.coordinates = coordinates;
+        this.hit = false;
+        this.scaleFactor = 0.2;
+    }
 
+    checkHit(projectileCoordinates) {
+        if (distance(this.coordinates, projectileCoordinates) < 1.0 * this.scaleFactor) {
+            this.hit = true;
+        }
+    }
+
+    draw(gl, program, uColorLocation, drawingMode, wireframeMode, uploadModelView) {
+        pushMatrix();
+        multTranslation(this.coordinates);
+        multRotationX(90);
+
+        multScale([this.scaleFactor, this.scaleFactor, this.scaleFactor]);
+
+        // Draw solid torus
+        if (wireframeMode !== 2) {
+            if (this.hit) {
+                gl.uniform3f(uColorLocation, 0.1, 1.0, 0.1); // Green when hit
+            } else {
+                gl.uniform3f(uColorLocation, 1.0, 0.1, 0.1); // Red when not hit
+            }
+            uploadModelView(gl, program);
+            TORUS.draw(gl, program, gl.TRIANGLES);
+        }
+
+        // Draw wireframe
+        if (wireframeMode !== 1) {
+            gl.uniform3f(uColorLocation, 0.3, 0.3, 0.3);
+            uploadModelView(gl, program);
+            TORUS.draw(gl, program, gl.LINES);
+        }
+        popMatrix();
+    }
+}
+function distance(point1, point2) {
+    return Math.hypot(
+        Math.abs(point1[0] - point2[0]),
+        Math.abs(point1[1] - point2[1]),
+        Math.abs(point1[2] - point2[2])
+    );
+}
 
 function setup(shaders) {
     let canvas = document.getElementById("gl-canvas");
@@ -85,6 +131,21 @@ function setup(shaders) {
 
     let wireframeMode = 0;
 
+
+    // Projectile variables
+    let projectileCoordinates = [];
+    let projectileVelocityVectors = [];
+    let firedProjectile = false;
+
+    const PROJECTILE_RADIUS = 0.025;
+    const PROJECTILE_GRAVITY = 9.8 / 500;
+    const PROJECTILE_SPEED = 0.25;
+    const GUN_LENGTH = 1.2;
+
+
+    // Targets array
+    let targets = [];
+
     resize_canvas();
     window.addEventListener("resize", resize_canvas);
 
@@ -112,11 +173,12 @@ function setup(shaders) {
     document.onkeydown = function (event) {
         switch (event.key) {
             case 'h':
-                if (overlayPanel.style.display === "none") {
+                if (overlayPanel.style.display == "none") {
                     overlayPanel.style.display = "block";
+                } else {
+                    overlayPanel.style.display = "none";
                 }
                 break;
-
             case '0':
                 isSplitView = !isSplitView;
                 isOblique = true;
@@ -196,10 +258,10 @@ function setup(shaders) {
                 rc = Math.min(60, rc + 1);
                 break;
             case 'a':
-                rb = Math.min(40, rb + 1);
+                rb = Math.min(60, rb + 1);
                 break;
             case 'd':
-                rb = Math.max(-40, rb - 1);
+                rb = Math.max(-60, rb - 1);
                 break;
             case ' ':
                 wireframeMode = (wireframeMode + 1) % 3;
@@ -217,6 +279,123 @@ function setup(shaders) {
                 theta = 0.1;
                 isPerspective = false;
                 break;
+
+            case 'z':
+                addProjectile();
+                break;
+        }
+    }
+
+    function addProjectile() {
+        // Calculate angles
+        let turretAngleRad = rb * Math.PI / 180;
+        let totalGunAngle = rc + 45.0;
+        let gunAngleRad = totalGunAngle * Math.PI / 180;
+
+
+        let turretPivotPos = [rg, 0.08 + 0.23, 0];
+
+        let cannonPivotLocal = [-0.5, 0.18, 0];
+
+        // Rotate this local pivot offset by the turret's rotation (rb, around Y axis)
+        let cosRb = Math.cos(turretAngleRad);
+        let sinRb = Math.sin(turretAngleRad);
+
+        // This is the base coordinate: the cannon's pivot point in world space
+        let coordinates = [
+            turretPivotPos[0] + (cannonPivotLocal[0] * cosRb + cannonPivotLocal[2] * sinRb),
+            turretPivotPos[1] + cannonPivotLocal[1],
+            turretPivotPos[2] + (-cannonPivotLocal[0] * sinRb + cannonPivotLocal[2] * cosRb)
+        ];
+
+
+        let cosRc = Math.cos(gunAngleRad);
+        let sinRc = Math.sin(gunAngleRad);
+        let gunLocalDir = [
+            -sinRc,
+            cosRc,
+            0
+        ];
+
+        // Now rotate this direction by the turret rotation (rb around Y axis)
+        let vector = [
+            gunLocalDir[0] * cosRb + gunLocalDir[2] * sinRb,
+            gunLocalDir[1],
+            -gunLocalDir[0] * sinRb + gunLocalDir[2] * cosRb
+        ];
+
+        // Normalize the vector (it should already be normalized, but this is safe)
+        let magnitude = Math.hypot(vector[0], vector[1], vector[2]);
+        if (magnitude > 0) {
+            for (let i = 0; i < 3; i++) {
+                vector[i] /= magnitude;
+            }
+        }
+
+        // starting position to spawn at cannon tip
+
+        coordinates[0] += vector[0] * GUN_LENGTH;
+        coordinates[1] += vector[1] * GUN_LENGTH;
+        coordinates[2] += vector[2] * GUN_LENGTH;
+
+
+        for (let i = 0; i < 3; i++) {
+            vector[i] *= PROJECTILE_SPEED;
+        }
+
+        projectileCoordinates.push(coordinates);
+        projectileVelocityVectors.push(vector);
+    }
+
+    function updateProjectiles() {
+        for (let i = projectileCoordinates.length - 1; i >= 0; i--) {
+            // Remove projectiles that hit the ground
+            if (projectileCoordinates[i][1] < 0.0) {
+                projectileCoordinates.splice(i, 1);
+                projectileVelocityVectors.splice(i, 1);
+                continue;
+            }
+
+            // Update position
+            for (let j = 0; j < 3; j++) {
+                projectileCoordinates[i][j] += projectileVelocityVectors[i][j];
+            }
+
+            // Apply gravity to Y velocity
+            projectileVelocityVectors[i][1] -= PROJECTILE_GRAVITY;
+
+            // Check for target hits
+            for (let target of targets) {
+                target.checkHit(projectileCoordinates[i]);
+            }
+        }
+    }
+
+    function drawProjectiles() {
+        for (let i = 0; i < projectileCoordinates.length; i++) {
+            pushMatrix();
+            multTranslation(projectileCoordinates[i]);
+            multScale([PROJECTILE_RADIUS, PROJECTILE_RADIUS, PROJECTILE_RADIUS]);
+
+            if (wireframeMode !== 2) {
+                gl.uniform3f(uColorLocation, 1.0, 0.0, 0.0);
+                uploadModelView(gl, program);
+                SPHERE.draw(gl, program, gl.TRIANGLES);
+            }
+
+            if (wireframeMode !== 1) {
+                gl.uniform3f(uColorLocation, 0.7, 0.0, 0.0);
+                uploadModelView(gl, program);
+                SPHERE.draw(gl, program, gl.LINES);
+            }
+            popMatrix();
+        }
+    }
+
+    function generateTargets() {
+        targets = [];
+        for (let i = 0; i < 5; i++) {
+            targets.push(new Target([-2.0 + 1.0 * i, 0.5, -3.0]));
         }
     }
 
@@ -227,6 +406,8 @@ function setup(shaders) {
     CYLINDER.init(gl);
     SPHERE.init(gl);
     TORUS.init(gl);
+
+    generateTargets();
 
     window.requestAnimationFrame(render);
 
@@ -264,6 +445,15 @@ function setup(shaders) {
     function drawScene() {
         ground(uColorLocation, 11, 11, 0.5666666666666667);
         Tank();
+
+        pushMatrix();
+        drawProjectiles();
+        popMatrix();
+
+        // Draw targets
+        for (let i = 0; i < targets.length; i++) {
+            targets[i].draw(gl, program, uColorLocation, mode, wireframeMode, uploadModelView);
+        }
     }
 
     function uploadProjection() {
@@ -653,6 +843,8 @@ function setup(shaders) {
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.useProgram(program);
+
+        updateProjectiles();
 
         if (isSplitView) {
             for (let i = 0; i < viewports.length; i++) {
