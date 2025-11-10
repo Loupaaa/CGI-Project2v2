@@ -67,6 +67,7 @@ function setup(shaders) {
 
     let currentView = 1;
     let isOblique = false;
+    let isPerspective = false;
 
     let zoom = 1.0;
     let viewSize = 0.8;
@@ -150,16 +151,15 @@ function setup(shaders) {
                 isSplitView = false;
                 break;
 
+
             case '8':
-                if (currentView == 4) {
+                if (currentView == 4 || isSplitView) {
                     isOblique = !isOblique;
                 }
                 break;
             case '9':
-                if (currentView == 4) {
-                    isOblique = !isOblique;
-                    ;
-                }
+                isPerspective = !isPerspective;
+                resize_canvas();
                 break;
 
             case 'ArrowUp':
@@ -215,6 +215,7 @@ function setup(shaders) {
                 }
                 gamma = 0.2;
                 theta = 0.1;
+                isPerspective = false;
                 break;
         }
     }
@@ -663,15 +664,22 @@ function setup(shaders) {
                 let vZoom = v.zoom;
 
                 let mP;
-                if (vpAspect > 1) {
-                    mP = ortho(-vSize * vpAspect * vZoom, vSize * vpAspect * vZoom, -vSize * vZoom, vSize * vZoom, -20, 20);
+                if (isPerspective) {
+
+                    mP = perspective(45, vpAspect, 0.1, 100);
                 } else {
-                    mP = ortho(-vSize * vZoom, vSize * vZoom, -vSize / vpAspect * vZoom, vSize / vpAspect * vZoom, -20, 20);
+
+                    if (vpAspect > 1) {
+                        mP = ortho(-vSize * vpAspect * vZoom, vSize * vpAspect * vZoom, -vSize * vZoom, vSize * vZoom, -20, 20);
+                    } else {
+                        mP = ortho(-vSize * vZoom, vSize * vZoom, -vSize / vpAspect * vZoom, vSize / vpAspect * vZoom, -20, 20);
+                    }
                 }
+
                 let mv = v.mView;
 
-                // Se for a 4ª vista E estiver em modo Oblíquo, aplica a distorção
-                if (i == 3 && isOblique == true) {
+
+                if (i == 3 && isOblique == true && !isPerspective) {
                     const L = 0.5;
                     const alpha = 45 * Math.PI / 180;
 
@@ -685,41 +693,45 @@ function setup(shaders) {
                 }
 
                 uploadMatrix("u_projection", mP);
-                loadMatrix(mv); // Carrega a vista
+                loadMatrix(mv);
 
-                // Se for a 4ª vista, aplica as rotações
                 if (i == 3) {
-                    // Se NÃO estiver em modo oblíquo (logo, está em Axonométrico)
+
                     if (isOblique == false) {
-                        // Esta é a tua "matriz axonométrica"!
                         multRotationY(45);
-                        multRotationX(35.264); // Ângulo isométrico clássico
+                        multRotationX(35.264);
                     }
 
-                    // Aplica as rotações do utilizador (gamma/theta) EM AMBOS OS MODOS
+
                     let UpDown = gamma * 180.0;
                     let LeftRight = theta * 90.0;
                     multRotationY(UpDown);
                     multRotationX(LeftRight);
                 }
 
-                drawScene(); // Desenha a cena para esta viewport
+                drawScene();
             }
-        }
-        else {
-            // --- MODO DE VISTA ÚNICA ---
+        } else {
+
             gl.viewport(0, 0, canvas.width, canvas.height);
 
             let mP;
-            if (aspect > 1) {
-                mP = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -20, 20);
+            if (isPerspective) {
+
+                mP = perspective(45, aspect, 0.1, 100);
             } else {
-                mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
+
+                if (aspect > 1) {
+                    mP = ortho(-viewSize * aspect * zoom, viewSize * aspect * zoom, -viewSize * zoom, viewSize * zoom, -20, 20);
+                } else {
+                    mP = ortho(-viewSize * zoom, viewSize * zoom, -viewSize / aspect * zoom, viewSize / aspect * zoom, -20, 20);
+                }
             }
+
             let mv = mView;
 
-            // Se for a vista 4 E estiver em modo Oblíquo, aplica a distorção
-            if (currentView === 4 && isOblique) {
+
+            if (currentView == 4 && isOblique && !isPerspective) {
                 const L = 0.5;
                 const alpha = 45 * Math.PI / 180;
 
@@ -735,10 +747,8 @@ function setup(shaders) {
             uploadMatrix("u_projection", mP);
             loadMatrix(mv);
 
-            if (currentView === 4) {
-
-                if (isOblique == false) {
-
+            if (currentView == 4) {
+                if (isOblique == false && !isPerspective) {
                     multRotationY(45);
                     multRotationX(35.264);
                 }
@@ -749,7 +759,6 @@ function setup(shaders) {
                 multRotationX(LeftRight);
             }
 
-
             drawScene();
         }
     }
@@ -757,4 +766,4 @@ function setup(shaders) {
 
 
 const urls = ["shader.vert", "shader.frag"];
-loadShadersFromURLS(urls).then(shaders => setup(shaders))
+loadShadersFromURLS(urls).then(shaders => setup(shaders));
