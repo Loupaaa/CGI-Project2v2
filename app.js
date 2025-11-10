@@ -11,7 +11,7 @@ class Target {
     constructor(coordinates) {
         this.coordinates = coordinates;
         this.hit = false;
-        this.scaleFactor = 0.2;
+        this.scaleFactor = 0.3;
     }
 
     checkHit(projectileCoordinates) {
@@ -116,7 +116,7 @@ function setup(shaders) {
     let isPerspective = false;
 
     let zoom = 1.0;
-    let viewSize = 0.8;
+    let viewSize = 1.6;
 
     let gamma = 0.2;
     let theta = 0.1;
@@ -187,7 +187,7 @@ function setup(shaders) {
             case '1':
                 mView = lookAt([-5, 0.3, 0.], [0, 0.3, 0], [0, 1, 0]);
                 currentView = 1;
-                viewSize = 0.8;
+                viewSize = 1.5;
                 isOblique = false;
                 isSplitView = false;
                 break;
@@ -201,7 +201,7 @@ function setup(shaders) {
             case '3':
                 mView = lookAt([0, 5, 0], [0, 0.3, 0], [0, 0, -1])
                 currentView = 3;
-                viewSize = 0.8;
+                viewSize = 3.1;
                 isOblique = false;
                 isSplitView = false;
                 break;
@@ -267,8 +267,8 @@ function setup(shaders) {
                 wireframeMode = (wireframeMode + 1) % 3;
                 event.preventDefault();
                 break;
+            //Renicia o pedido no enunciado e o estado dos targets
             case 'r':
-
                 zoom = 1.0;
                 if (isSplitView) {
                     viewports.forEach(v => {
@@ -278,6 +278,11 @@ function setup(shaders) {
                 gamma = 0.2;
                 theta = 0.1;
                 isPerspective = false;
+
+                targets.forEach(target => {
+                    target.hit = false;
+                });
+
                 break;
 
             case 'z':
@@ -394,8 +399,8 @@ function setup(shaders) {
 
     function generateTargets() {
         targets = [];
-        for (let i = 0; i < 5; i++) {
-            targets.push(new Target([-2.0 + 1.0 * i, 0.5, -3.0]));
+        for (let i = 0; i < 3; i++) {
+            targets.push(new Target([-2.0 + 2.0 * i, 0.5, -3.0]));
         }
     }
 
